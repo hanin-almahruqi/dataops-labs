@@ -1,11 +1,12 @@
 """
 DataOps Mentorship — Automated Grading Script
 ==============================================
-Grades student dbt submissions for Weeks 1–2.
+Grades student dbt submissions for Weeks 1–3.
 
 Usage:
     python scripts/grade_assignment.py --week 1
     python scripts/grade_assignment.py --week 2
+    python scripts/grade_assignment.py --week 3
 """
 
 import argparse
@@ -27,6 +28,7 @@ MODELS_DIR = os.path.join(DBT_PROJECT_DIR, "models")
 STAGE_DIR = os.path.join(MODELS_DIR, "stage")
 DEV_DIR = os.path.join(MODELS_DIR, "dev")
 SNAPSHOTS_DIR = os.path.join(DBT_PROJECT_DIR, "snapshots")
+TESTS_DIR = os.path.join(DBT_PROJECT_DIR, "tests")
 DOCS_DIR = os.path.join(DBT_PROJECT_DIR, "docs")
 RESULTS_PATH = os.path.join(DBT_PROJECT_DIR, "target", "run_results.json")
 
@@ -279,6 +281,136 @@ def grade_week_2():
 
 
 # ═════════════════════════════════════════════════════════════
+#  WEEK 3 GRADING
+# ═════════════════════════════════════════════════════════════
+
+def grade_week_3():
+    """Grade Week 3: Data Tests."""
+    report = []
+    total = 0
+    max_score = 0
+
+    report.append("# 📊 Week 3 — Grade Report\n")
+    report.append("## Data Tests\n")
+    report.append("| Task | Check | Points | Status |")
+    report.append("| :--- | :--- | :---: | :---: |")
+
+    checks = []
+
+    # ── Task 3.1: Generic Tests in YAML (30 pts) ────────────
+    schema_path = os.path.join(STAGE_DIR, "schema.yml")
+
+    checks.append(("3.1", *check_file_exists(schema_path, "schema.yml exists"), 5))
+
+    checks.append(("3.1", *check_file_contains(
+        schema_path,
+        r"- unique",
+        "Contains 'unique' tests"
+    ), 3))
+
+    checks.append(("3.1", *check_file_contains(
+        schema_path,
+        r"- not_null",
+        "Contains 'not_null' tests"
+    ), 3))
+
+    checks.append(("3.1", *check_file_contains(
+        schema_path,
+        r"accepted_values",
+        "Contains 'accepted_values' test"
+    ), 3))
+
+    checks.append(("3.1", *check_file_contains(
+        schema_path,
+        r"relationships",
+        "Contains 'relationships' test"
+    ), 3))
+
+    # Check all models are listed
+    for model_name in ["stg_customers", "stg_products", "stg_orders",
+                        "stg_order_items", "stg_store_locations"]:
+        checks.append(("3.1", *check_file_contains(
+            schema_path,
+            rf"name:\s*{model_name}",
+            f"{model_name} declared in schema"
+        ), 2))
+
+    checks.append(("3.1", *check_file_contains(
+        schema_path,
+        r"version:\s*2",
+        "Schema uses version 2"
+    ), 3))
+
+    # ── Task 3.2: Custom Singular Tests (35 pts) ────────────
+    singular_tests = [
+        ("test_no_future_orders.sql", 5),
+        ("test_positive_quantities.sql", 5),
+        ("test_valid_discount_range.sql", 5),
+        ("test_positive_shipping.sql", 5),
+        ("test_positive_cost_price.sql", 5),
+    ]
+    for test_file, pts in singular_tests:
+        path = os.path.join(TESTS_DIR, test_file)
+        checks.append(("3.2", *check_file_exists(path, f"{test_file} exists"), pts))
+
+    # Check tests use ref()
+    for test_file in ["test_no_future_orders.sql", "test_positive_quantities.sql",
+                      "test_valid_discount_range.sql", "test_positive_shipping.sql",
+                      "test_positive_cost_price.sql"]:
+        path = os.path.join(TESTS_DIR, test_file)
+        checks.append(("3.2", *check_file_contains(
+            path,
+            r"ref\s*\(",
+            f"{test_file} uses ref()"
+        ), 2))
+
+    # ── Task 3.3: Quarantine Table (20 pts) ─────────────────
+    quarantine_path = os.path.join(DEV_DIR, "quarantine_orders.sql")
+
+    checks.append(("3.3", *check_file_exists(quarantine_path, "quarantine_orders.sql exists"), 5))
+
+    checks.append(("3.3", *check_file_contains(
+        quarantine_path,
+        r"materialized\s*=\s*['\"]table['\"]",
+        "Materialized as table"
+    ), 5))
+
+    checks.append(("3.3", *check_file_contains(
+        quarantine_path,
+        r"failure_reason|union\s+all",
+        "Contains failure_reason or UNION ALL logic"
+    ), 5))
+
+    checks.append(("3.3", *check_file_contains(
+        quarantine_path,
+        r"ref\s*\(",
+        "Uses ref() to reference staged models"
+    ), 5))
+
+    # ── Task 3.4: Data Quality Report (15 pts) ──────────────
+    report_path = os.path.join(DOCS_DIR, "data_quality_report.md")
+
+    checks.append(("3.4", *check_file_exists(report_path, "data_quality_report.md exists"), 5))
+    checks.append(("3.4", *check_word_count(report_path, 200, "At least 200 words"), 5))
+    checks.append(("3.4", *check_file_contains(
+        report_path,
+        r"(issue|fix|recommend|table|test)",
+        "Contains issue analysis content"
+    ), 5))
+
+    # ── Build report ────────────────────────────────────────
+    for task, passed, message, points in checks:
+        max_score += points
+        earned = points if passed else 0
+        total += earned
+        status = f"{earned}/{points}"
+        report.append(f"| {task} | {message} | {status} | {'✅' if passed else '❌'} |")
+
+    _append_summary(report, total, max_score)
+    return "\n".join(report)
+
+
+# ═════════════════════════════════════════════════════════════
 #  SHARED
 # ═════════════════════════════════════════════════════════════
 
@@ -306,8 +438,8 @@ def main():
         description="DataOps Mentorship — Assignment Grader"
     )
     parser.add_argument(
-        "--week", type=int, required=True, choices=[1, 2],
-        help="Which week to grade (1 or 2)"
+        "--week", type=int, required=True, choices=[1, 2, 3],
+        help="Which week to grade (1, 2, or 3)"
     )
     args = parser.parse_args()
 
@@ -315,6 +447,8 @@ def main():
         print(grade_week_1())
     elif args.week == 2:
         print(grade_week_2())
+    elif args.week == 3:
+        print(grade_week_3())
 
 
 if __name__ == "__main__":
