@@ -214,7 +214,7 @@ ORDER BY table_name;
 
 ### Task 5.3 — Exposures (25 pts)
 
-Create `models/dev/_exposures.yml` that declares two downstream consumers of your dbt models.
+Create `models/dev/exposures.yml` that declares two downstream consumers of your dbt models.
 
 **What you need to do:**
 
@@ -233,7 +233,7 @@ Each exposure must include:
 
 **💡 Code Hints:**
 
-Create `models/dev/_exposures.yml`:
+Create `models/dev/exposures.yml`:
 
 ```yaml
 version: 2
@@ -284,7 +284,7 @@ dbt docs serve --profiles-dir .
 
 In the docs site, click on **"Exposures"** in the left sidebar. You should see your two exposures listed. Click on one to view its lineage graph — it will show which models feed into the exposure.
 
-**Deliverable:** `models/dev/_exposures.yml`
+**Deliverable:** `models/dev/exposures.yml`
 
 | Criteria | Points |
 | --- | --- |
@@ -301,12 +301,12 @@ Write descriptions for all your models and their key columns in YAML schema file
 
 **What you need to do:**
 
-1. Update `models/stage/_schema.yml` to add a `description` to every staging model
-2. Create `models/dev/_schema.yml` with descriptions for every DEV model **and** full column-level documentation for `fct_order_details` and `dim_customers`
+1. Update `models/stage/schema.yml` to add a `description` to every staging model
+2. Create `models/dev/schema.yml` with descriptions for every DEV model **and** full column-level documentation for `fct_order_details` and `dim_customers`
 
 **💡 Code Hints:**
 
-**`models/stage/_schema.yml`** — add model-level descriptions:
+**`models/stage/schema.yml`** — add model-level descriptions:
 
 ```yaml
 version: 2
@@ -342,7 +342,7 @@ models:
       opened_date to date. One row per store.
 ```
 
-**`models/dev/_schema.yml`** — model-level + column-level documentation:
+**`models/dev/schema.yml`** — model-level + column-level documentation:
 
 ```yaml
 version: 2
@@ -450,7 +450,7 @@ Navigate to `fct_order_details` in the docs site. You should see:
 - A model description at the top
 - A full column list with descriptions
 
-**Deliverable:** `models/stage/_schema.yml` (updated) + `models/dev/_schema.yml` (new)
+**Deliverable:** `models/stage/schema.yml` (updated) + `models/dev/schema.yml` (new)
 
 | Criteria | Points |
 | --- | --- |
@@ -555,15 +555,15 @@ dbt_learning/
 ├── models/
 │   ├── stage/
 │   │   ├── sources.yml
-│   │   ├── _schema.yml                   ← UPDATED (model descriptions)
+│   │   ├── schema.yml                   ← UPDATED (model descriptions)
 │   │   ├── stg_customers.sql
 │   │   ├── stg_products.sql
 │   │   ├── stg_orders.sql
 │   │   ├── stg_order_items.sql
 │   │   └── stg_store_locations.sql
 │   └── dev/
-│       ├── _schema.yml                   ← NEW (model + column docs)
-│       ├── _exposures.yml                ← NEW
+│       ├── schema.yml                   ← NEW (model + column docs)
+│       ├── exposures.yml                ← NEW
 │       ├── fct_order_details.sql         ← UPDATED (post_hook for indexes)
 │       ├── fct_monthly_revenue.sql
 │       ├── dim_customers.sql             ← UPDATED (post_hook for index)

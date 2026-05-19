@@ -665,7 +665,7 @@ def grade_week_4():
 #  WEEK 5 GRADING
 # ═════════════════════════════════════════════════════════════
 
-def _find_schema_file(directory, base_names=("_schema.yml", "schema.yml")):
+def _find_schema_file(directory, base_names=("schema.yml", "_schema.yml")):
     """Return path to the first schema file that exists under `directory`."""
     for name in base_names:
         candidate = os.path.join(directory, name)
@@ -745,14 +745,14 @@ def grade_week_5():
     ), 5))
 
     # ── Task 5.3: Exposures (25 pts) ────────────────────────
-    exposures_path = os.path.join(DEV_DIR, "_exposures.yml")
-    # Fall back to exposures.yml if the student named it without the underscore
+    exposures_path = os.path.join(DEV_DIR, "exposures.yml")
+    # Fall back to _exposures.yml in case student used the underscore prefix
     if not os.path.isfile(exposures_path):
-        alt = os.path.join(DEV_DIR, "exposures.yml")
+        alt = os.path.join(DEV_DIR, "_exposures.yml")
         if os.path.isfile(alt):
             exposures_path = alt
 
-    checks.append(("5.3", *check_file_exists(exposures_path, "_exposures.yml exists"), 4))
+    checks.append(("5.3", *check_file_exists(exposures_path, "exposures.yml exists"), 4))
 
     checks.append(("5.3", *check_file_contains(
         exposures_path,
