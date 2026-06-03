@@ -1,0 +1,22 @@
+# ══════════════════════════════════════════════════════════════
+# Airflow image with dbt-postgres installed
+# ══════════════════════════════════════════════════════════════
+# Lets Airflow BashOperator tasks run `dbt` directly (no Docker-in-
+# Docker). The dbt project is mounted at /opt/airflow/dbt by
+# docker-compose. dbt-postgres pin matches Dockerfile.dbt.
+# ══════════════════════════════════════════════════════════════
+
+FROM apache/airflow:2.10.5
+
+# pip must run as the unprivileged airflow user in this base image
+USER airflow
+RUN pip install --no-cache-dir dbt-postgres==1.9.*
+
+# git is needed by `dbt deps` (installing packages like dbt-utils) and
+# clears dbt's "git not found" check. Installed after pip so the dbt layer
+# stays cached. apt needs root; switch back to airflow at the end.
+USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    rm -rf /var/lib/apt/lists/*
+USER airflow
