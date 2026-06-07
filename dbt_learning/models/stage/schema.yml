@@ -2,6 +2,10 @@ version: 2
 
 models:
   - name: stg_customers
+    description: >
+      Cleaned and standardised customer records from the raw seed data.
+      Trims whitespace from names, lowercases email addresses, and casts
+      signup_date to a proper date type. One row per customer.
     columns:
       - name: customer_id
         tests:
@@ -13,6 +17,10 @@ models:
           - not_null
 
   - name: stg_products
+    description: >
+      Cleansed product catalog from raw seed data. Trims product names,
+      casts prices to numeric(12,2), and converts is_active from text to
+      boolean. One row per product.
     columns:
       - name: product_id
         tests:
@@ -20,6 +28,10 @@ models:
           - not_null
 
   - name: stg_orders
+    description: >
+      Cleaned order headers. Lowercases and trims order_status, casts
+      order_date to date, and defaults null shipping_fee values to 0.
+      One row per order.
     columns:
       - name: order_id
         tests:
@@ -43,6 +55,10 @@ models:
                 - cancelled
 
   - name: stg_order_items
+    description: >
+      Cleaned line items for each order. Casts quantity to integer and
+      prices to numeric(12,2). Defaults null discount_pct to 0.
+      One row per order line item.
     columns:
       - name: order_item_id
         tests:
@@ -62,6 +78,9 @@ models:
               field: product_id
 
   - name: stg_store_locations
+    description: >
+      Cleaned store location dimension. Trims all text fields and casts
+      opened_date to date. One row per store.
     columns:
       - name: store_id
         tests:

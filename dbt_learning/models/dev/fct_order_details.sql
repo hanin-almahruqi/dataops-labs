@@ -1,7 +1,11 @@
 {{
     config(
         materialized='incremental',
-        unique_key='order_item_id'
+        unique_key='order_item_id',
+        post_hook=[
+            "CREATE INDEX IF NOT EXISTS idx_fct_order_details_order_date   ON {{ this }} (order_date)",
+            "CREATE INDEX IF NOT EXISTS idx_fct_order_details_customer_id  ON {{ this }} (customer_id)"
+        ]
     )
 }}
 
@@ -10,12 +14,14 @@ with order_items as (
 ),
 
 orders as (
+
     select * from {{ ref('stg_orders') }}
 
     {% if is_incremental() %}
         where order_date >
             (select max(order_date) from {{ this }}) - interval '3 days'
     {% endif %}
+
 ),
 
 products as (
@@ -27,15 +33,21 @@ customers as (
 ),
 
 final as (
+
     select
-        -- grain
+
+        -- surrogate key 
+        {{ dbt_utils.generate_surrogate_key(['oi.order_id', 'oi.order_item_id']) }} as order_detail_sk,
+
+        -- keys
         oi.order_item_id,
         oi.order_id,
         oi.product_id,
         o.customer_id,
 
         -- customer info
-        c.customer_name,
+        c.first_name,
+        c.last_name,
         c.email,
         c.country as customer_country,
 
@@ -56,18 +68,38 @@ final as (
         oi.unit_price,
         oi.discount_pct,
 
-        -- calculations
+        -- gross
         (oi.quantity * oi.unit_price) as gross_amount,
 
-        (oi.quantity * oi.unit_price * (1 - oi.discount_pct / 100.0))
-            as net_amount,
+        -- net (USING MACRO - TASK 4.3)
+        {{ calculate_revenue(
+            'oi.quantity',
+            'oi.unit_price',
+            'oi.discount_pct'
+        ) }} as net_amount,
 
+        -- total (net + shipping)
         (
-            (oi.quantity * oi.unit_price * (1 - oi.discount_pct / 100.0))
+            {{ calculate_revenue(
+                'oi.quantity',
+                'oi.unit_price',
+                'oi.discount_pct'
+            ) }}
             + coalesce(o.shipping_fee, 0)
-        ) as total_amount
+        ) as total_amount,
+
+        -- TASK 4.2: currency conversion 
+        {{ convert_currency(
+            '(
+                oi.quantity * oi.unit_price *
+                (1 - oi.discount_pct / 100.0)
+            )',
+            'o.currency',
+            'USD'
+        ) }} as total_amount_usd
 
     from order_items oi
+
     left join orders o
         on oi.order_id = o.order_id
 

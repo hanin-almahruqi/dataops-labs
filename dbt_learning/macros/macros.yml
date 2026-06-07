@@ -1,0 +1,35 @@
+version: 2
+
+macros:
+
+  - name: convert_currency
+    description: >
+      Converts a monetary amount from its original currency into a target currency
+      (default: USD) using fixed exchange rates defined in the macro logic.
+      This macro standardizes financial values across different currencies in the model.
+    arguments:
+      - name: amount_column
+        type: string
+        description: "Column or SQL expression representing the monetary value to convert"
+      - name: currency_column
+        type: string
+        description: "Column containing the ISO currency code (e.g., USD, OMR, EUR)"
+      - name: target_currency
+        type: string
+        description: "Target currency for conversion (default is USD)"
+
+  - name: calculate_revenue
+    description: >
+      Calculates standardized net revenue using the business formula:
+      quantity * unit_price * (1 - discount_pct / 100).
+      This ensures consistent revenue calculation across all models.
+    arguments:
+      - name: quantity
+        type: string
+        description: "Column representing item quantity"
+      - name: unit_price
+        type: string
+        description: "Column representing unit price of the product"
+      - name: discount_pct
+        type: string
+        description: "Column representing discount percentage applied (0-100)"

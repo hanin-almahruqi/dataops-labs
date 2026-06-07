@@ -1,0 +1,31 @@
+version: 2
+
+exposures:
+
+  - name: revenue_dashboard
+    type: dashboard
+    maturity: high
+    owner:
+      name: "Hanin Al Mahruqi"
+      email: "hanin.mahruqi@rihal.om"
+    description: >
+      The main revenue dashboard used by the sales and finance teams.
+      Shows daily, monthly, and cumulative revenue broken down by store,
+      product category, and customer country. Refreshed nightly.
+    depends_on:
+      - ref('fct_order_details')
+      - ref('dim_customers')
+
+  - name: inventory_report
+    type: analysis
+    maturity: medium
+    owner:
+      name: "Hanin Al Mahruqi"
+      email: "hanin.mahruqi@rihal.om"
+    description: >
+      A weekly inventory and product performance report used by the
+      procurement team. Tracks stock turnover rates, identifies
+      low-margin products, and flags items with abnormal discount rates.
+    depends_on:
+      - ref('stg_products')
+      - ref('fct_order_details')

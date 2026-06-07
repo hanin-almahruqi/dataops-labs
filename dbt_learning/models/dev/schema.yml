@@ -1,0 +1,85 @@
+version: 2
+
+models:
+  - name: fct_order_details
+    description: >
+      The central fact table of the project. Contains one row per order
+      line item enriched with customer, product, and store information.
+      Calculated columns include net revenue (after discount) and USD-
+      converted amounts using fixed exchange rates.
+    columns:
+      - name: order_detail_sk
+        description: Surrogate key — MD5 hash of order_id and order_item_id. Stable unique identifier for each row.
+      - name: order_item_id
+        description: Natural key from the source system. Unique identifier for each line item.
+      - name: order_id
+        description: Foreign key linking to the parent order in stg_orders.
+      - name: order_date
+        description: The date the order was placed. Used for partitioning in the incremental load.
+      - name: customer_id
+        description: Foreign key to the customer who placed the order.
+      - name: customer_name
+        description: Full name of the customer, derived as first_name || ' ' || last_name from stg_customers.
+      - name: store_id
+        description: Foreign key to the store where the order was placed.
+      - name: product_id
+        description: Foreign key to the product purchased on this line item.
+      - name: product_name
+        description: Display name of the product as it appears in the product catalog.
+      - name: category
+        description: Product category (e.g. Electronics, Clothing). Used for revenue breakdowns.
+      - name: currency
+        description: The currency code the product was priced in (USD, OMR, or EUR).
+      - name: quantity
+        description: Number of units ordered on this line item.
+      - name: unit_price
+        description: Price per unit at the time of purchase, in the product's original currency.
+      - name: discount_pct
+        description: Percentage discount applied to this line item (0–100). Defaults to 0 if not specified.
+      - name: net_amount
+        description: >
+          Revenue after discount in the original currency.
+          Calculated as: quantity × unit_price × (1 − discount_pct / 100).
+      - name: shipping_fee
+        description: Flat shipping fee for the parent order, allocated to this line item.
+      - name: total_amount
+        description: Net amount plus the shipping fee, in the original currency.
+      - name: total_amount_usd
+        description: >
+          Total amount converted to USD using fixed exchange rates
+          (1 OMR = 2.60 USD, 1 EUR = 1.08 USD). Used for cross-currency comparisons.
+
+  - name: dim_customers
+    description: >
+      Customer dimension table aggregating order history per customer.
+      Joins stg_customers with order totals to provide a single view of
+      each customer's profile and spending behaviour.
+    columns:
+      - name: customer_id
+        description: Primary key. Unique identifier for each customer.
+      - name: full_name
+        description: Customer's full name, derived as first_name || ' ' || last_name.
+      - name: email
+        description: Customer's email address (lowercased and trimmed in the stage layer).
+      - name: country
+        description: Country where the customer is registered. Used for geographic segmentation.
+      - name: city
+        description: City where the customer is registered.
+      - name: signup_date
+        description: The date the customer created their account.
+      - name: total_orders
+        description: Total number of orders placed by this customer across all time.
+      - name: total_spent
+        description: Sum of total_amount across all orders for this customer, in the order's original currency.
+
+  - name: fct_monthly_revenue
+    description: >
+      Pivot table showing revenue by store and month for a single target year.
+      Each row is one store; columns jan_revenue through dec_revenue hold the
+      total net revenue for that month. Generated dynamically using a Jinja loop.
+
+  - name: quarantine_orders
+    description: >
+      Holds orders that failed one or more data quality checks. Captures rows with
+      future order dates, missing customer IDs, negative shipping fees, or invalid
+      status values. Used for investigation and upstream data fix tracking.
