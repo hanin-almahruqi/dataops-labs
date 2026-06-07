@@ -10,7 +10,12 @@
 # ══════════════════════════════════════════════════════════════
 
 x-airflow-common: &airflow-common
-  image: apache/airflow:2.10.5
+  # Custom image: stock Airflow + dbt-postgres so BashOperator tasks
+  # can run `dbt` directly (see Dockerfile.airflow).
+  build:
+    context: .
+    dockerfile: Dockerfile.airflow
+  image: dataops-airflow:2.10.5   # named so all 3 services reuse one build
   env_file: .env
   environment:
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -22,6 +27,7 @@ x-airflow-common: &airflow-common
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
+    - ./dbt_learning:/opt/airflow/dbt        # dbt project for BashOperator tasks
   depends_on:
     postgres:
       condition: service_healthy

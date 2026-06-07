@@ -1,7 +1,7 @@
 """
 DataOps Mentorship — Automated Grading Script
 ==============================================
-Grades student dbt submissions for Weeks 1–5.
+Grades student dbt submissions for Weeks 1–6.
 
 Usage:
     python scripts/grade_assignment.py --week 1
@@ -9,6 +9,7 @@ Usage:
     python scripts/grade_assignment.py --week 3
     python scripts/grade_assignment.py --week 4
     python scripts/grade_assignment.py --week 5
+    python scripts/grade_assignment.py --week 6
 """
 
 import argparse
@@ -36,6 +37,8 @@ MACROS_DIR = os.path.join(DBT_PROJECT_DIR, "macros")
 RESULTS_PATH = os.path.join(DBT_PROJECT_DIR, "target", "run_results.json")
 CATALOG_PATH = os.path.join(DBT_PROJECT_DIR, "target", "catalog.json")
 DBT_PROJECT_YML = os.path.join(DBT_PROJECT_DIR, "dbt_project.yml")
+REPO_ROOT = os.path.join(os.path.dirname(__file__), "..")
+AIRFLOW_DAGS_DIR = os.path.join(REPO_ROOT, "airflow", "dags")
 
 
 # ═════════════════════════════════════════════════════════════
@@ -931,6 +934,162 @@ def grade_week_5():
 
 
 # ═════════════════════════════════════════════════════════════
+#  WEEK 6 GRADING
+# ═════════════════════════════════════════════════════════════
+
+def grade_week_6():
+    """Grade Week 6: Airflow Automation."""
+    report = []
+    total = 0
+    max_score = 0
+
+    report.append("# 📊 Week 6 — Grade Report\n")
+    report.append("## Airflow Automation\n")
+    report.append("| Task | Check | Points | Status |")
+    report.append("| :--- | :--- | :---: | :---: |")
+
+    checks = []
+
+    overview_path = os.path.join(DOCS_DIR, "airflow_overview.md")
+    retro_path = os.path.join(DOCS_DIR, "pipeline_retrospective.md")
+    dag_path = os.path.join(AIRFLOW_DAGS_DIR, "dbt_pipeline.py")
+    dag_content = file_exists(dag_path) or ""
+
+    # ── Task 6.1: Airflow Concepts doc (10 pts) ─────────────
+    checks.append(("6.1", *check_file_exists(overview_path, "airflow_overview.md exists"), 2))
+    checks.append(("6.1", *check_word_count(
+        overview_path, 150, "airflow_overview.md has substantial content"
+    ), 2))
+    concept_terms = [
+        (r"\bDAG\b", "explains what a DAG is"),
+        (r"BashOperator", "covers BashOperator"),
+        (r"PythonOperator", "covers PythonOperator"),
+        (r"schedule[_ ]?interval|schedule", "covers scheduling"),
+        (r"\bsensor", "covers sensors"),
+    ]
+    concept_hits = sum(
+        1 for pat, _ in concept_terms
+        if re.search(pat, file_exists(overview_path) or "", re.IGNORECASE)
+    )
+    if concept_hits >= 5:
+        checks.append(("6.1", True, "✅ All 4 concepts addressed (DAG, operators, schedule, sensor)", 6))
+    else:
+        checks.append(("6.1", False,
+                       f"❌ Only {concept_hits}/5 concept topics found in airflow_overview.md", 6))
+
+    # ── Task 6.2: Pipeline DAG (45 pts) ─────────────────────
+    checks.append(("6.2", *check_file_exists(dag_path, "airflow/dags/dbt_pipeline.py exists"), 3))
+
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"BashOperator", "DAG uses BashOperator"
+    ), 5))
+
+    # All six task ids present
+    task_ids = ["dbt_seed", "dbt_test_sources", "dbt_run_stage",
+                "dbt_test_stage", "dbt_run_dev", "dbt_test_dev"]
+    found_tasks = [t for t in task_ids if re.search(rf'["\']{t}["\']', dag_content)]
+    if len(found_tasks) == len(task_ids):
+        checks.append(("6.2", True, f"✅ All 6 tasks defined ({', '.join(task_ids)})", 5))
+    else:
+        missing = set(task_ids) - set(found_tasks)
+        checks.append(("6.2", False, f"❌ Missing task(s): {', '.join(sorted(missing))}", 5))
+
+    # Correct dbt commands
+    # Accept either an inline bash string (`dbt seed`) or a bare command
+    # argument (`"seed"`) passed to a task-builder helper.
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"dbt\s+seed|['\"]seed['\"]", "runs `dbt seed`"
+    ), 2))
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"run\s+--select\s+stage", "runs `dbt run --select stage`"
+    ), 3))
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"run\s+--select\s+dev", "runs `dbt run --select dev`"
+    ), 3))
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"\bdbt\s+.*\btest\b|test\s+--select", "runs `dbt test`"
+    ), 2))
+
+    # Linear dependency chain
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r">>", "task dependencies wired with >>"
+    ), 5))
+
+    # Schedule: daily 6 AM
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"0\s+6\s+\*\s+\*\s+\*", "schedule set to daily 06:00 (`0 6 * * *`)"
+    ), 5))
+
+    # catchup
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"catchup\s*=\s*False", "catchup=False"
+    ), 3))
+
+    # retries / retry_delay — accept both default_args dict style
+    # (`"retries": 2`) and operator kwarg style (`retries=2`).
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"retries['\"]?\s*[:=]\s*2", "retries=2"
+    ), 3))
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"retry_delay['\"]?\s*[:=]", "retry_delay configured"
+    ), 2))
+
+    # default_args with owner
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"default_args", "default_args defined"
+    ), 2))
+    checks.append(("6.2", *check_file_contains(
+        dag_path, r"owner", "owner set in default_args"
+    ), 2))
+
+    # ── Task 6.3: Manual run screenshots (20 pts) ───────────
+    week6_dir = os.path.join(REPO_ROOT, "week_6")
+    screenshots = []
+    if os.path.isdir(week6_dir):
+        screenshots = [
+            f for f in os.listdir(week6_dir)
+            if f.lower().endswith((".png", ".jpg", ".jpeg"))
+        ]
+    if len(screenshots) >= 2:
+        checks.append(("6.3", True, f"✅ {len(screenshots)} screenshot(s) found in week_6/", 20))
+    elif len(screenshots) == 1:
+        checks.append(("6.3", False,
+                       "❌ Only 1 screenshot in week_6/ — need graph view AND dbt_run_dev log", 20))
+    else:
+        checks.append(("6.3", False,
+                       "❌ No screenshots in week_6/ (graph view + dbt_run_dev log)", 20))
+
+    # ── Task 6.4: Failure callback (15 pts) ─────────────────
+    checks.append(("6.4", *check_file_contains(
+        dag_path, r"on_failure_callback", "on_failure_callback referenced"
+    ), 5))
+    checks.append(("6.4", *check_file_contains(
+        dag_path, r"def\s+\w+\s*\(\s*context", "callback function defined (takes context)"
+    ), 5))
+    checks.append(("6.4", *check_file_contains(
+        dag_path, r"context\[['\"]task_instance['\"]\]|context\.get\(['\"]task_instance",
+        "callback uses context['task_instance']"
+    ), 5))
+
+    # ── Task 6.5: Retrospective doc (10 pts) ────────────────
+    checks.append(("6.5", *check_file_exists(retro_path, "pipeline_retrospective.md exists"), 4))
+    checks.append(("6.5", *check_word_count(
+        retro_path, 150, "pipeline_retrospective.md has thoughtful content"
+    ), 6))
+
+    # ── Build report ────────────────────────────────────────
+    for task, passed, message, points in checks:
+        max_score += points
+        earned = points if passed else 0
+        total += earned
+        status = f"{earned}/{points}"
+        report.append(f"| {task} | {message} | {status} | {'✅' if passed else '❌'} |")
+
+    _append_summary(report, total, max_score)
+    return "\n".join(report)
+
+
+# ═════════════════════════════════════════════════════════════
 #  SHARED
 # ═════════════════════════════════════════════════════════════
 
@@ -958,8 +1117,8 @@ def main():
         description="DataOps Mentorship — Assignment Grader"
     )
     parser.add_argument(
-        "--week", type=int, required=True, choices=[1, 2, 3, 4, 5],
-        help="Which week to grade (1, 2, 3, 4, or 5)"
+        "--week", type=int, required=True, choices=[1, 2, 3, 4, 5, 6],
+        help="Which week to grade (1, 2, 3, 4, 5, or 6)"
     )
     args = parser.parse_args()
 
@@ -973,6 +1132,8 @@ def main():
         print(grade_week_4())
     elif args.week == 5:
         print(grade_week_5())
+    elif args.week == 6:
+        print(grade_week_6())
 
 
 if __name__ == "__main__":

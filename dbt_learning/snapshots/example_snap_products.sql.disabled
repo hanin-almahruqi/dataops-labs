@@ -4,23 +4,28 @@
 -- Your task is to create a REAL snapshot file called snap_products.sql
 -- that tracks price and active-status changes on the products table.
 -- ──────────────────────────────────────────────────────────────
+--
+-- The example below is wrapped in a Jinja comment {# ... #} so dbt ignores it
+-- entirely — otherwise dbt would try to parse this guide as a real snapshot
+-- and fail. Copy the pattern into your own snap_products.sql (without the
+-- comment wrapper and the leading -- markers).
+--
+{#
+    {% snapshot your_snapshot_name %}
 
--- A snapshot wraps your query in a special Jinja block:
---
--- {% snapshot your_snapshot_name %}
---
--- {{
---     config(
---         target_schema='RAW',
---         unique_key='primary_key_column',
---         strategy='check',
---         check_cols=['column_a', 'column_b']
---     )
--- }}
---
--- select * from {{ source('RAW', 'your_table') }}
---
--- {% endsnapshot %}
+        {{
+            config(
+                target_schema='RAW',
+                unique_key='primary_key_column',
+                strategy='check',
+                check_cols=['column_a', 'column_b']
+            )
+        }}
+
+        select * from {{ source('RAW', 'your_table') }}
+
+    {% endsnapshot %}
+#}
 --
 -- STRATEGY OPTIONS:
 --   'check'     → compares specific columns to detect changes
